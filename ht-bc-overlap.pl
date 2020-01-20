@@ -37,39 +37,80 @@ sub alma
 		{ 
 			chomp;
 			my $record = decode_utf8( $_ );
-
-			my ($alma, $aleph, %oclc, $lccn, $date_type, $date1, $date2, $century, $lang, $pages, $illustrations, $centimeters, $status, $call_no, $personalauthor, 				$title, @citations, $specificbibliography, $country, $holcount, $bcdigitized, $otherhol)=();
-			
-			$holcount=0;
-			$otherhol="";
+			my ($alma, $status, $call_no, $country, $date_type, $date1, $date2, %oclc, $pages, $bcdigitized, $title)=();
 						
+			my $holcount=0;
+			my $otherhol="";
+									
 			#find specific fields, change them here or in subroutine
 			my @record_parts = split(/\n/, $record);
 
-		foreach my $record_part (@record_parts) {
-			if ($record_part =~ m/^=008  /) {$country=substr($record_part,21,3);}
-			
-
-
-			if ($record_part =~ m/=001  (.*)/) {$alma=$1;
-};
-			
-
-
-			if ($record_part =~ m/^=008  /) 
+			foreach my $record_part (@record_parts) 
 			{
-				$date1=substr($record_part,13,4);
-				if (substr($date1, 0, 2)=~ m/\d{2}/)
+				if ($record_part =~ m/=001  (.*)/) {$alma=$1};
+				
+				if ($record_part =~ m/^=008  /) 
 				{
-					$century=substr($date1, 0, 2)+1;
+					$date_type=substr($record_part, 12,1 );
+					$date1=substr($record_part,13,4);
+					$date2=substr($record_part,17,4);	
+					$country=substr($record_part,21,3);								
 				}
-				else {$century="unknown"}
+
+				if ($record_part =~ m/^\=019/) 
+				{
+					my $other_oclc=substr($record_part, 10);	
+					my @other_oclcs = split/\$/,$other_oclc;
+
+					foreach(@other_oclcs)
+					{
+						$_ =~ s/^\s+|\s+$//g;
+						$_ =~ s/[^\d]//g;
+						$_=~s/^0+//g; 
+						$oclc{ $_ }=();
+					}
+				}
+
+			if ($record_part =~ m/^\=035.{7}OCoLC.o/) 
+			{
+					my $n=substr($record_part, 19);
+
+				
+
+						$n =~ s/\D//g;
+						$n =~ s/^\s+|\s+$//g;
+						$n =~s/^0+//g; 
+						$oclc{ $n }=();
+
+
 			}
 
+	 		if ($record_part  =~ m/^=245.*\$a(.*)/)
+ 				{$title=$1;
+				 $title=~s/\$[a-z]/ /g;
+				 $title=~s/\.$//;	
+				 $title=substr($title, 0, 100); }
 
 
-			if ($record_part =~ m/^=940/ && $record_part =~ m/EAST/i ) {$status="Retain for East";}
+			if ($record_part =~ m/^=300(.*)\$a(.*)\$b/) 
+			{
+				$pages = $2;
+				$pages =~ s/ ;| ://;
+				
+			}
+			elsif ($record_part =~ m/^=300.*\$a(.*)\$c/) 
+			{
+				$pages = $1;
+				$pages =~ s/ ;| ://;
+			}
+			elsif ($record_part =~ m/^=300.*\$a(.*)/) 
+			{
+				$pages = $1;
+				$pages =~ s/ ;| ://;
+			};
+		
 			
+#=852  0\$83942808840001021$bTML$cSTACK$hBR350.E7 P320
 
 			if ($record_part =~ m/^=852/) 
 			{
@@ -91,102 +132,15 @@ sub alma
 
 			}
 
-
-
-
-
-#=852  0\$83942808840001021$bTML$cSTACK$hBR350.E7 P320
-
-			if ($record_part =~ m/^=010/) {$lccn=substr($record_part, 10);}
-
-			if ($record_part =~ m/^=008  /) {$date_type=substr($record_part, 12,1 );}
-
-
-
-		
-			if ($record_part =~ m/^=008  /){ #find date2 in 008
-				$date2=substr($record_part,17,4);	
-					
-			};
-
-			if ($record_part =~ m/^=008  /){$lang=substr($record_part, 41, 3)};
-
-
-			if ($record_part =~ m/^=300(.*)\$a(.*)\$b/) {
-				$pages = $2;
-				
-				$pages =~ s/ ;| ://;
-				
-			}
-				elsif ($record_part =~ m/^=300.*\$a(.*)\$c/) {
-				$pages = $1;
-				$pages =~ s/ ;| ://;
-			}
-				elsif ($record_part =~ m/^=300.*\$a(.*)/) {
-				$pages = $1;
-				$pages =~ s/ ;| ://;
-			};
-		
-		
-			
-			
-			if ($record_part =~ m/^=300.*\$b(.*)\$/) {
-				$illustrations = $1;
-			$illustrations =~ s/ ;| ://;
-		
-			}
-			if ($record_part =~ m/^=300.*\$c(.*)/) {
-				$centimeters = $1;
-			
+			if ($record_part =~ m/^=901.*\$a(.*)/) 
+			{
+				$bcdigitized = $1;			
 			}
 
-			if ($record_part =~ m/^=901.*\$a(.*)/) {
-				$bcdigitized = $1;
-			
+			if ($record_part =~ m/^=940/ && $record_part =~ m/EAST/i ) 
+			{
+				$status="Retain for East";
 			}
-
-			if ($record_part =~ m/^\=019/) 
-				{
-					 my $other_oclc=substr($record_part, 10);
-	
-					my @other_oclcs = split/\$/,$other_oclc;
-
-
-					foreach(@other_oclcs)
-					{
-						$_ =~ s/^\s+|\s+$//g;
-						$_ =~ s/[^\d]//g;
-						$_=~s/^0+//g; 
-						$oclc{ $_ }=();
-
-					}
-
-				}
-
-			if ($record_part =~ m/^\=035.{7}OCoLC.o/) 
-				{
-					my $n=substr($record_part, 19);
-
-				
-
-						$n =~ s/\D//g;
-						$n =~ s/^\s+|\s+$//g;
-						$n =~s/^0+//g; 
-						$oclc{ $n }=();
-
-
-				}
-
-
-
- 
-	 		if ($record_part  =~ m/^=245.*\$a(.*)/)
- 				{$title=$1;
-				 $title=~s/\$[a-z]/ /g;
-				 $title=~s/\.$//;	
-				 $title=substr($title, 0, 100); }
-
-
 			
 
         	}
@@ -258,11 +212,6 @@ sub alma
 
 		
 			$fh->print("\n");
-
-
-
-
-
 	}
 };
 
