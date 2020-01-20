@@ -47,14 +47,19 @@ sub alma
 
 			foreach my $record_part (@record_parts) 
 			{
-				if ($record_part =~ m/=001  (.*)/) {$alma=$1};
+				if ($record_part =~ m/=001  (.*)/) 
+				{
+					$alma=$1;
+
+				};
 				
 				if ($record_part =~ m/^=008  /) 
 				{
 					$date_type=substr($record_part, 12,1 );
 					$date1=substr($record_part,13,4);
 					$date2=substr($record_part,17,4);	
-					$country=substr($record_part,21,3);								
+					$country=substr($record_part,21,3);	
+							
 				}
 
 				if ($record_part =~ m/^\=019/) 
@@ -69,6 +74,7 @@ sub alma
 						$_=~s/^0+//g; 
 						$oclc{ $_ }=();
 					}
+
 				}
 
 			if ($record_part =~ m/^\=035.{7}OCoLC.o/) 
@@ -86,10 +92,12 @@ sub alma
 			}
 
 	 		if ($record_part  =~ m/^=245.*\$a(.*)/)
- 				{$title=$1;
+ 			{
+				 $title=$1;
 				 $title=~s/\$[a-z]/ /g;
 				 $title=~s/\.$//;	
-				 $title=substr($title, 0, 100); }
+				 $title=substr($title, 0, 100); 
+			}
 
 
 			if ($record_part =~ m/^=300(.*)\$a(.*)\$b/) 
