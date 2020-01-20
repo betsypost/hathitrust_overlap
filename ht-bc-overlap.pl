@@ -19,6 +19,9 @@ my $fh = IO::File->new($outputfile, 'w')
 	or die "unable to open output file for writing: $!";
 binmode($fh, ':utf8');
 
+$fh->print("MMSID\tHoldings Record Count\tEast Commitment\tAll Holdings\tCountry\tDate Type\tDate 1\tDate 2\tOCLC Numbers\tExtent\tBC Digitization Activity\tHT record #\tHT rights\tHT access\tTitle\n");
+
+
 hathi_oclc_numbers();
 
 alma();
@@ -37,10 +40,10 @@ sub alma
 		{ 
 			chomp;
 			my $record = decode_utf8( $_ );
-			my ($alma, $status, $call_no, $country, $date_type, $date1, $date2, %oclc, $pages, $bcdigitized, $title)=();
+			my ($alma, $east, $country, $date_type, $date1, $date2, %oclc, $pages, $bcdigitized, $title)=();
 						
 			my $holcount=0;
-			my $otherhol="";
+			my $holdings="";
 									
 			#find specific fields, change them here or in subroutine
 			my @record_parts = split(/\n/, $record);
@@ -69,7 +72,7 @@ sub alma
 
 					foreach(@other_oclcs)
 					{
-						$_ =~ s/^\s+|\s+$//g;
+#						$_ =~ s/^\s+|\s+$//g;
 						$_ =~ s/[^\d]//g;
 						$_=~s/^0+//g; 
 						$oclc{ $_ }=();
@@ -84,7 +87,7 @@ sub alma
 				
 
 						$n =~ s/\D//g;
-						$n =~ s/^\s+|\s+$//g;
+#						$n =~ s/^\s+|\s+$//g;
 						$n =~s/^0+//g; 
 						$oclc{ $n }=();
 
@@ -121,22 +124,17 @@ sub alma
 #=852  0\$83942808840001021$bTML$cSTACK$hBR350.E7 P320
 
 			if ($record_part =~ m/^=852/) 
-			{
-
-				if (($record_part =~ m/ONL\$cSTACK_NL/) or ($record_part =~ m/ONL\$cSTACK/) or ($record_part =~ m/ONL\$cOVER/) or ($record_part =~ m/ONL\$cOVER_NL/) or ($record_part =~ m/ONL\$cREF_NL/) or ($record_part =~ m/ONL\$cRFDSK/))
-					{
-						$record_part =~ m/\$b(.*)/;
-						$call_no=$1;
-					}
-
-				else
-
-					{
-						$record_part =~ m/\$b(.*)/;
-						$otherhol=$otherhol.'|'.$1;
-
-					} 
+			{	
+				$record_part =~ m/\$b(.*)/;
+				$holdings=$holdings.'|||'.$1;
 				$holcount++;
+
+			}
+
+			if ($record_part =~ m/^=86/) 
+			{	
+				if($record_part =~ m/\$a(.*)/)
+				{$holdings=$holdings.'|'.$1;}
 
 			}
 
@@ -147,7 +145,7 @@ sub alma
 
 			if ($record_part =~ m/^=940/ && $record_part =~ m/EAST/i ) 
 			{
-				$status="Retain for East";
+				$east="Retain for East";
 			}
 			
 
@@ -162,14 +160,11 @@ sub alma
 
 			$fh->print("$holcount\t");
 
-			if ($status) {$fh->print("$status\t")} 
-			else {$fh->print("\t")};
-		
-			if ($call_no) {$fh->print("$call_no\t")} 
+			if ($east) {$fh->print("$east\t")} 
 			else {$fh->print("\t")};
 
-			if ($otherhol) {$fh->print("$otherhol\t")} 
-			else {$fh->print("\t")};
+			$holdings =~ s/\$[a-z 0-9]/ /g;
+			$fh->print("$holdings\t");
 			
 			if ($country) {$fh->print("$country\t")}
 			else {$fh->print("\t")};
