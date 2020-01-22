@@ -6,7 +6,7 @@ use Win32::OLE::Const 'Microsoft Excel';
 use IO::File;
 use utf8;
 use Encode;
-use Cwd;
+#use Cwd;
 
 my %hathi;
 my %hrights;
@@ -202,6 +202,7 @@ sub alma
 				{
 					$fh -> print("$hathi{$k}\t$hrights{$k}\t$haccess{$k}\t");
 					$oclc_count=$oclc_count + 1;
+					last;
 				}
 
 
@@ -235,8 +236,13 @@ sub hathi_oclc_numbers
 			foreach (@hathi_oclc_numbers)
 			{
       			$hathi{ $_ } = $hathi_row[3];
-				$hrights {$_} = $hathi_row[2];
-				$haccess {$_} = $hathi_row[1];
+				if ($hrights {$_}){$hrights {$_} = $hrights {$_}.';'.$hathi_row[2]}
+				else {$hrights {$_} = $hathi_row[2]}
+
+
+
+				if ($haccess {$_}){$haccess {$_} = $haccess {$_}.';'.$hathi_row[1]}
+				else {$haccess {$_} = $hathi_row[1]}
 			}
 		}
 #		if ($hathi_row[10]) {$hathi_row[10] =~ s/ //g; print "$hathi_row[10]\n"};
@@ -249,9 +255,9 @@ close (HATHI_FILE);
 
 =pod
 
-use: temp.pl hathi_full_20140301.txt records.mrk
+use: ht-bc-overlap.pl hathi_full_yyyymm01.txt records.mrk
 
-hathi_full_20140301.txt is a tab-delimited download of the most recent full Hathi File
+hathi_full_yyyymm01.txt is a tab-delimited download of the most recent full Hathi File
 
 records.mrk is a file of records downloaded from ALMA and converted to .mrk for analysis
 
