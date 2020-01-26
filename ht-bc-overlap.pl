@@ -236,13 +236,27 @@ sub hathi_oclc_numbers
 			foreach (@hathi_oclc_numbers)
 			{
       			$hathi{ $_ } = $hathi_row[3];
-				if ($hrights {$_}){$hrights {$_} = $hrights {$_}.';'.$hathi_row[2]}
+				if ($hrights {$_}){$hrights {$_} = $hrights {$_}.'; '.$hathi_row[2]}
 				else {$hrights {$_} = $hathi_row[2]}
 
+				if ($haccess {$_})
+				{
+					$haccess {$_} = $haccess {$_}.'; '.$hathi_row[1];
+					if ($hathi_row[4])
+					{
+						$haccess {$_} = $haccess {$_}.' ('.$hathi_row[4].')';
+					}
+				}
+				else 
+				{	
+					$haccess {$_} = $hathi_row[1];
+					if ($hathi_row[4])
+					{
+						$haccess {$_} = $haccess {$_}.' ('.$hathi_row[4].')';
+					}
+				}
 
 
-				if ($haccess {$_}){$haccess {$_} = $haccess {$_}.';'.$hathi_row[1]}
-				else {$haccess {$_} = $hathi_row[1]}
 			}
 		}
 #		if ($hathi_row[10]) {$hathi_row[10] =~ s/ //g; print "$hathi_row[10]\n"};
