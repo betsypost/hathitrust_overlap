@@ -217,6 +217,8 @@ sub alma
 		
 			$fh->print("\n");
 	}
+close (ALMA_RECORDS);
+
 };
 
 
