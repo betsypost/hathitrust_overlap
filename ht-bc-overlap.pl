@@ -14,8 +14,8 @@ my $alma_records = shift(@ARGV);
 my $items = shift(@ARGV);
 my %bib_file;
 
-=cut
-#seek FILEHANDLE, 0, 0;
+
+
 my $fh = IO::File->new($outputfile, 'w')
 	or die "unable to open output file for writing: $!";
 binmode($fh, ':utf8');
@@ -30,7 +30,7 @@ $fh->close();
 
 (%hathi, %hrights, %haccess)=();
 
-=cut
+
 
 read_bib_analysis();
 
@@ -40,10 +40,43 @@ get_and_merge_items();
 sub get_and_merge_items
 #######################
 {
-print "hi";
+	my $fh = IO::File->new('items.txt', 'w')
+		or die "unable to open output file for writing: $!";
+	binmode($fh, ':utf8');
+
+	open (ITEMS, $items);
+	binmode(ITEMS, ':utf8');
+	
+	$fh->print("MMSID\tHoldings Record Count\tEast Commitment\tAll Holdings\tCountry\tDate Type\tDate 1\tDate 2\tOCLC Numbers\tExtent\tBC Digitization Activity\tHT record #\tHT rights\tHT access\tTitle\n");
+
+	
+
+	while (<ITEMS>) 
+	{
+		chomp;		
+		my @line = split(/\t/, $_);
+		foreach (@line) {$_ =~ s/^'|'$//g;}
+
+		if($bib_file{$line[0]})
+		{
+			my $line_slice = $line[3]."\t".$line[6]."\t".$line[9]."\t".$line[10]."\t".$line[11]."\t".$line[12]."\t".$line[13]."\t".$line[16]."\t".$line[17]."\t".$line[18]."\t".$line[19]."\t".$line[20]."\t".$line[21]."\t".$line[37]."\t".$line[38]."\t".$line[39]."\t".$line[45]."\t".$line[48]."\t".$line[49]."\t";
+
+			$fh->print($bib_file{$line[0]}.$line_slice."\n");
+		};
+
+
+#my $array_length = @line; 
+#print "$array_length\n";
+
+	}
+
+
+
+	$fh->close();
+
 }
 
-=cut
+
 #########
 sub alma 
 #########
@@ -286,7 +319,7 @@ sub hathi_oclc_numbers
 close (HATHI_FILE);
 }
 
-=cut
+
 #########
 sub read_bib_analysis 
 #########
@@ -299,10 +332,9 @@ sub read_bib_analysis
 	{
 		chomp;			
 		my @line = split(/\t/, $_);
-		$bib_file{$line[0]} = @line;
+		$bib_file{$line[0]} = $_;
 		
 	}
-	while ( my ($key, $value) = each(%bib_file) ) {print "$key => $value\n";}
 	close (OVERLAP_ANALYSIS);
 }
 
