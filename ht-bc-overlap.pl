@@ -6,19 +6,21 @@ use Win32::OLE::Const 'Microsoft Excel';
 use IO::File;
 use utf8;
 use Encode;
-#use Cwd;
 
 my (%hathi, %hrights, %haccess);
 my $outputfile = "overlap_analysis.txt";
 my $hathi_files = shift(@ARGV);
 my $alma_records = shift(@ARGV);
+my $items = shift(@ARGV);
+my %bib_file;
 
+=cut
+#seek FILEHANDLE, 0, 0;
 my $fh = IO::File->new($outputfile, 'w')
 	or die "unable to open output file for writing: $!";
 binmode($fh, ':utf8');
 
 $fh->print("MMSID\tHoldings Record Count\tEast Commitment\tAll Holdings\tCountry\tDate Type\tDate 1\tDate 2\tOCLC Numbers\tExtent\tBC Digitization Activity\tHT record #\tHT rights\tHT access\tTitle\n");
-
 
 hathi_oclc_numbers();
 
@@ -28,7 +30,20 @@ $fh->close();
 
 (%hathi, %hrights, %haccess)=();
 
+=cut
 
+read_bib_analysis();
+
+get_and_merge_items();
+
+#######################
+sub get_and_merge_items
+#######################
+{
+print "hi";
+}
+
+=cut
 #########
 sub alma 
 #########
@@ -218,6 +233,7 @@ sub alma
 			$fh->print("\n");
 	}
 close (ALMA_RECORDS);
+$/="\n";
 
 };
 
@@ -225,6 +241,7 @@ close (ALMA_RECORDS);
 
 ####################
 sub hathi_oclc_numbers
+####################
 {
 	open (HATHI_FILE, $hathi_files);
 	while (<HATHI_FILE>) 
@@ -267,6 +284,26 @@ sub hathi_oclc_numbers
 #  while ( my ($key, $value) = each(%hathi) ) {print "$key => $value\n";}
 
 close (HATHI_FILE);
+}
+
+=cut
+#########
+sub read_bib_analysis 
+#########
+{	
+	open (OVERLAP_ANALYSIS, $outputfile);
+	binmode(OVERLAP_ANALYSIS, ':utf8');
+	shift;
+
+	while (<OVERLAP_ANALYSIS>) 
+	{
+		chomp;			
+		my @line = split(/\t/, $_);
+		$bib_file{$line[0]} = @line;
+		
+	}
+	while ( my ($key, $value) = each(%bib_file) ) {print "$key => $value\n";}
+	close (OVERLAP_ANALYSIS);
 }
 
 =pod
