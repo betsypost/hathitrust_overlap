@@ -8,9 +8,7 @@ use utf8;
 use Encode;
 #use Cwd;
 
-my %hathi;
-my %hrights;
-my %haccess;
+my (%hathi, %hrights, %haccess);
 my $outputfile = "overlap_analysis.txt";
 my $hathi_files = shift(@ARGV);
 my $alma_records = shift(@ARGV);
@@ -27,6 +25,8 @@ hathi_oclc_numbers();
 alma();
 
 $fh->close();
+
+(%hathi, %hrights, %haccess)=();
 
 
 #########
