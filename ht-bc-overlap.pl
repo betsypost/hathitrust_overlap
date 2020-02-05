@@ -1,8 +1,6 @@
 #!C:/Perl/bin/perl -w 
 use strict;
 
-use Win32::OLE qw(in with);
-use Win32::OLE::Const 'Microsoft Excel';
 use IO::File;
 use utf8;
 use Encode;
@@ -14,88 +12,29 @@ my $alma_records = shift(@ARGV);
 my $items = shift(@ARGV);
 my %bib_file;
 
+main();
 
-my $fh = IO::File->new($outputfile, 'w')
-	or die "unable to open output file for writing: $!";
-binmode($fh, ':utf8');
-
-$fh->print("MMSID\tHoldings Record Count\tEast Commitment\tAll Holdings\tCountry\tDate Type\tDate 1\tDate 2\tOCLC Numbers\tExtent\tBC Digitization Activity\tHT record #\tHT rights\tHT access\tTitle\n");
-
-hathi_oclc_numbers();
-
-alma();
-
-$fh->close();
-
-(%hathi, %hrights, %haccess)=();
-
-
-read_bib_analysis();
-
-get_and_merge_items();
-
-#######################
-sub get_and_merge_items
-#######################
+#########
+sub main 
+#########
 {
-	my $fh = IO::File->new('items.txt', 'w')
-		or die "unable to open output file for writing: $!";
-	binmode($fh, ':utf8');
+	hathi_oclc_numbers();
+	alma();
 
-	my $lc_sorted;
+	(%hathi, %hrights, %haccess)=();
 
-	open (ITEMS, $items);
-	binmode(ITEMS, ':utf8');
-	
-	$fh->print("MMSID\tHoldings Record Count\tEast Commitment\tAll Holdings\tCountry\tDate Type\tDate 1\tDate 2\tOCLC Numbers\tExtent\tBC Digitization Activity\tHT record #\tHT rights\tHT access\tTitle\tBarcode\tBib Material Type\tPermament Call Number\tSort Call Number\tPermament Physical Location\tLocal Location\tHolding Type\tItem Material Type\tChronology\tEnumeration\tIssue year\tDescription\tPublic note\tFulfillment note\tInteral note (1)\tInteral note (2)\tInteral note (3)\tStatus\tNumber of loans\tLast loan\n");
-
-	
-
-	while (<ITEMS>) 
-	{
-		chomp;		
-		my @line = split(/\t/, $_);
-		foreach (@line) {$_ =~ s/^'|'$//g;}
-
-		if($bib_file{$line[0]})
-		{
-			if($line[9]=~m/^[A-Z]/) {$lc_sorted = lc_sorter($line[9])}	
-			else {$lc_sorted = "not LC"}
-			
-			my $line_slice = $line[3]."\t".$line[6]."\t".$line[9]."\t".$lc_sorted."\t".$line[10]."\t".$line[11]."\t".$line[12]."\t".$line[13]."\t".$line[16]."\t".$line[17]."\t".$line[18]."\t".$line[19]."\t".$line[20]."\t".$line[21]."\t".$line[37]."\t".$line[38]."\t".$line[39]."\t".$line[45]."\t".$line[48]."\t".$line[49]."\t";
-
-			$fh->print($bib_file{$line[0]}.$line_slice."\n");
-		};
-
-	}
-
-	$fh->close();
-
+	read_bib_analysis();
+	get_and_merge_items();
 }
-
-#########
-sub lc_sorter 
-#########
-{
-	my $call=shift;
-	$call =~ m/([A-Z]*)\s{0,1}(\d*)(.*)/;
-	my $class=$1;
-	$class = sprintf("%-3s", $class);
-	my $number = $2;
-	if ($2 ne "") 
-	{
-		$number = sprintf("%04d", $number);
-		return($class.$number.$3);
-	}
-	else {return("not LC")}
-
-};
-
 
 #########
 sub alma 
 #########
 {
+	my $fh = IO::File->new($outputfile, 'w')
+		or die "unable to open output file for writing: $!";
+	binmode($fh, ':utf8');
+
 	$/="\n\n";
 
 	open (ALMA_RECORDS, $alma_records);
@@ -108,7 +47,7 @@ sub alma
 			my $holcount=0;
 			my $holdings="";
 									
-			#find specific fields, change them here or in subroutine
+			#find specific fields
 			my @record_parts = split(/\n/, $record);
 
 			foreach my $record_part (@record_parts) 
@@ -135,26 +74,18 @@ sub alma
 
 					foreach(@other_oclcs)
 					{
-#						$_ =~ s/^\s+|\s+$//g;
 						$_ =~ s/[^\d]//g;
 						$_=~s/^0+//g; 
 						$oclc{ $_ }=();
 					}
-
 				}
 
 			if ($record_part =~ m/^\=035.{7}OCoLC.o/) 
 			{
-					my $n=substr($record_part, 19);
-
-				
-
-						$n =~ s/\D//g;
-#						$n =~ s/^\s+|\s+$//g;
-						$n =~s/^0+//g; 
-						$oclc{ $n }=();
-
-
+				my $n=substr($record_part, 19);
+				$n =~ s/\D//g;
+				$n =~s/^0+//g; 
+				$oclc{ $n }=();
 			}
 
 	 		if ($record_part  =~ m/^=245.*\$a(.*)/)
@@ -165,12 +96,10 @@ sub alma
 				 $title=substr($title, 0, 100); 
 			}
 
-
 			if ($record_part =~ m/^=300(.*)\$a(.*)\$b/) 
 			{
 				$pages = $2;
-				$pages =~ s/ ;| ://;
-				
+				$pages =~ s/ ;| ://;		
 			}
 			elsif ($record_part =~ m/^=300.*\$a(.*)\$c/) 
 			{
@@ -182,23 +111,17 @@ sub alma
 				$pages = $1;
 				$pages =~ s/ ;| ://;
 			};
-		
-			
-#=852  0\$83942808840001021$bTML$cSTACK$hBR350.E7 P320
 
 			if ($record_part =~ m/^=852/) 
 			{	
 				$record_part =~ m/\$b(.*)/;
 				$holdings=$holdings.'|||'.$1;
 				$holcount++;
-
 			}
 
 			if ($record_part =~ m/^=86/) 
 			{	
-				if($record_part =~ m/\$a(.*)/)
-				{$holdings=$holdings.'|'.$1;}
-
+				if($record_part =~ m/\$a(.*)/) {$holdings=$holdings.'|'.$1;}
 			}
 
 			if ($record_part =~ m/^=901.*\$a(.*)/) 
@@ -210,12 +133,7 @@ sub alma
 			{
 				$east="Retain for East";
 			}
-			
-
         	}
-
-
-
 
 #Write some data to a tab delimited file
 			
@@ -231,7 +149,6 @@ sub alma
 			
 			if ($country) {$fh->print("$country\t")}
 			else {$fh->print("\t")};
-
 
 			if ($date_type) {$fh->print("$date_type\t")}
 			else {$fh->print("\t")};
@@ -251,7 +168,6 @@ sub alma
 				}
 			$fh->print("\t");
 
-
 			if ($pages) {$fh->print("$pages\t")}
 			else {$fh->print("\t")};
 
@@ -267,24 +183,21 @@ sub alma
 					$oclc_count=$oclc_count + 1;
 					last;
 				}
-
-
 			}
 		
 		if ($oclc_count == 0){$fh->print("\t\t\t")}
 
-			if ($title) {$fh->print("$title\t")}
-			else {$fh->print("\t")};
-			
+		if ($title) {$fh->print("$title\t")}
+		else {$fh->print("\t")};
 
-		
-			$fh->print("\n");
+		$fh->print("\n");
 	}
+
 close (ALMA_RECORDS);
 $/="\n";
+$fh->close();
 
 };
-
 
 
 ####################
@@ -322,14 +235,9 @@ sub hathi_oclc_numbers
 						$haccess {$_} = $haccess {$_}.' ('.$hathi_row[4].')';
 					}
 				}
-
-
 			}
 		}
-#		if ($hathi_row[10]) {$hathi_row[10] =~ s/ //g; print "$hathi_row[10]\n"};
 	}
-
-#  while ( my ($key, $value) = each(%hathi) ) {print "$key => $value\n";}
 
 close (HATHI_FILE);
 }
@@ -341,7 +249,6 @@ sub read_bib_analysis
 {	
 	open (OVERLAP_ANALYSIS, $outputfile);
 	binmode(OVERLAP_ANALYSIS, ':utf8');
-	shift;
 
 	while (<OVERLAP_ANALYSIS>) 
 	{
@@ -352,6 +259,59 @@ sub read_bib_analysis
 	}
 	close (OVERLAP_ANALYSIS);
 }
+
+#######################
+sub get_and_merge_items
+#######################
+{
+	my $lc_sorted;
+	my $fh = IO::File->new($outputfile, 'w')
+		or die "unable to open output file for writing: $!";
+	binmode($fh, ':utf8');
+
+	$fh->print("MMSID\tHoldings Record Count\tEast Commitment\tAll Holdings\tCountry\tDate Type\tDate 1\tDate 2\tOCLC Numbers\tExtent\tBC Digitization Activity\tHT record #\tHT rights\tHT access\tTitle\tBarcode\tBib Material Type\tPermament Call Number\tSort Call Number\tPermament Physical Location\tLocal Location\tHolding Type\tItem Material Type\tChronology\tEnumeration\tIssue year\tDescription\tPublic note\tFulfillment note\tInteral note (1)\tInteral note (2)\tInteral note (3)\tStatus\tNumber of loans\tLast loan\n");
+
+	open (ITEMS, $items);
+	binmode(ITEMS, ':utf8');
+	while (<ITEMS>) 
+	{
+		chomp;		
+		my @line = split(/\t/, $_);
+		foreach (@line) {$_ =~ s/^'|'$//g;}
+
+		if($bib_file{$line[0]})
+		{
+			if($line[9]=~m/^[A-Z]/) {$lc_sorted = lc_sorter($line[9])}	
+			else {$lc_sorted = "not LC"}
+			
+			my $line_slice = $line[3]."\t".$line[6]."\t".$line[9]."\t".$lc_sorted."\t".$line[10]."\t".$line[11]."\t".$line[12]."\t".$line[13]."\t".$line[16]."\t".$line[17]."\t".$line[18]."\t".$line[19]."\t".$line[20]."\t".$line[21]."\t".$line[37]."\t".$line[38]."\t".$line[39]."\t".$line[45]."\t".$line[48]."\t".$line[49]."\t";
+
+			$fh->print($bib_file{$line[0]}.$line_slice."\n");
+		};
+	}
+
+	$fh->close();
+}
+
+#########
+sub lc_sorter 
+#########
+{
+	my $call=shift;
+	$call =~ m/([A-Z]*)\s{0,1}(\d*)(.*)/;
+	my $class=$1;
+	$class = sprintf("%-3s", $class);
+	my $number = $2;
+	if ($2 ne "") 
+	{
+		$number = sprintf("%04d", $number);
+		return($class.$number.$3);
+	}
+	else {return("not LC")}
+
+};
+
+
 
 =pod
 
