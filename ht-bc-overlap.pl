@@ -15,7 +15,6 @@ my $items = shift(@ARGV);
 my %bib_file;
 
 
-
 my $fh = IO::File->new($outputfile, 'w')
 	or die "unable to open output file for writing: $!";
 binmode($fh, ':utf8');
@@ -31,7 +30,6 @@ $fh->close();
 (%hathi, %hrights, %haccess)=();
 
 
-
 read_bib_analysis();
 
 get_and_merge_items();
@@ -44,10 +42,12 @@ sub get_and_merge_items
 		or die "unable to open output file for writing: $!";
 	binmode($fh, ':utf8');
 
+	my $lc_sorted;
+
 	open (ITEMS, $items);
 	binmode(ITEMS, ':utf8');
 	
-	$fh->print("MMSID\tHoldings Record Count\tEast Commitment\tAll Holdings\tCountry\tDate Type\tDate 1\tDate 2\tOCLC Numbers\tExtent\tBC Digitization Activity\tHT record #\tHT rights\tHT access\tTitle\n");
+	$fh->print("MMSID\tHoldings Record Count\tEast Commitment\tAll Holdings\tCountry\tDate Type\tDate 1\tDate 2\tOCLC Numbers\tExtent\tBC Digitization Activity\tHT record #\tHT rights\tHT access\tTitle\tBarcode\tBib Material Type\tPermament Call Number\tSort Call Number\tPermament Physical Location\tLocal Location\tHolding Type\tItem Material Type\tChronology\tEnumeration\tIssue year\tDescription\tPublic note\tFulfillment note\tInteral note (1)\tInteral note (2)\tInteral note (3)\tStatus\tNumber of loans\tLast loan\n");
 
 	
 
@@ -59,22 +59,37 @@ sub get_and_merge_items
 
 		if($bib_file{$line[0]})
 		{
-			my $line_slice = $line[3]."\t".$line[6]."\t".$line[9]."\t".$line[10]."\t".$line[11]."\t".$line[12]."\t".$line[13]."\t".$line[16]."\t".$line[17]."\t".$line[18]."\t".$line[19]."\t".$line[20]."\t".$line[21]."\t".$line[37]."\t".$line[38]."\t".$line[39]."\t".$line[45]."\t".$line[48]."\t".$line[49]."\t";
+			if($line[9]=~m/^[A-Z]/) {$lc_sorted = lc_sorter($line[9])}	
+			else {$lc_sorted = "not LC"}
+			
+			my $line_slice = $line[3]."\t".$line[6]."\t".$line[9]."\t".$lc_sorted."\t".$line[10]."\t".$line[11]."\t".$line[12]."\t".$line[13]."\t".$line[16]."\t".$line[17]."\t".$line[18]."\t".$line[19]."\t".$line[20]."\t".$line[21]."\t".$line[37]."\t".$line[38]."\t".$line[39]."\t".$line[45]."\t".$line[48]."\t".$line[49]."\t";
 
 			$fh->print($bib_file{$line[0]}.$line_slice."\n");
 		};
 
-
-#my $array_length = @line; 
-#print "$array_length\n";
-
 	}
-
-
 
 	$fh->close();
 
 }
+
+#########
+sub lc_sorter 
+#########
+{
+	my $call=shift;
+	$call =~ m/([A-Z]*)\s{0,1}(\d*)(.*)/;
+	my $class=$1;
+	$class = sprintf("%-3s", $class);
+	my $number = $2;
+	if ($2 ne "") 
+	{
+		$number = sprintf("%04d", $number);
+		return($class.$number.$3);
+	}
+	else {return("not LC")}
+
+};
 
 
 #########
@@ -340,16 +355,18 @@ sub read_bib_analysis
 
 =pod
 
-use: ht-bc-overlap.pl hathi_full_yyyymm01.txt records.mrk
+use: ht-bc-overlap.pl hathi_full_yyyymm01.txt records.mrk PHYSICAL_ITEM_ddddddddddddddddd.txt
 
 hathi_full_yyyymm01.txt is a tab-delimited download of the most recent full Hathi File
 
-records.mrk is a file of records downloaded from ALMA and converted to .mrk for analysis
+records.mrk is a file of records downloaded from Alma and converted to .mrk for analysis
+
+PHYSICAL_ITEM_ddddddddddddddddd.txt is an export of Alma physical items associated with the bibliographic records in the .mrk file.  It is exported from Alma as a csv file, opened, and resaved as tab delimited text
 
  
 Outputs overlap_analysis.txt
 
-betsy.post@bc.edu March 31, 2013
+betsy.post@bc.edu March 31, 2013; last revised February 2020
 
 
 =cut
